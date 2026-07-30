@@ -4,8 +4,8 @@
 #define PID_MOTOR_KP (200.0f)
 #define PID_MOTOR_KI (7000.0f)
 #define PID_MOTOR_KD (0.3f)
-#define PID_MOTOR_OUTPUT_LIMIT (100.0f)
-#define PID_MOTOR_DELTA_LIMIT (0.0f)
+#define PID_MOTOR_OUTPUT_LIMIT (20.0f)
+#define PID_MOTOR_DELTA_LIMIT (0.2f)
 
 PID_Struct pid_LF;
 PID_Struct pid_LR;
@@ -81,16 +81,72 @@ void PID_Motor_SetTargetSpeed(float speed_LF, float speed_LR, float speed_RF,
   PID_SetTarget(&pid_RR, speed_RR);
 }
 
+// void PID_Motor_Update(float dt) {
+//   pid_LF.input = vel_LF_mps;
+//   pid_LR.input = vel_LR_mps;
+//   pid_RF.input = vel_RF_mps;
+//   pid_RR.input = vel_RR_mps;
+
+//   Motor_SetSpeed(PID_OutputToMotorSpeed(PID_Calculate(&pid_LF, dt)),
+//                  PID_OutputToMotorSpeed(PID_Calculate(&pid_LR, dt)),
+//                  PID_OutputToMotorSpeed(PID_Calculate(&pid_RF, dt)),
+//                  PID_OutputToMotorSpeed(PID_Calculate(&pid_RR, dt)));
+// }
+
 void PID_Motor_Update(float dt) {
+  // 因為沒有反向，編碼器讀回來的速度永遠是正數
   pid_LF.input = vel_LF_mps;
   pid_LR.input = vel_LR_mps;
   pid_RF.input = vel_RF_mps;
   pid_RR.input = vel_RR_mps;
 
-  Motor_SetSpeed(PID_OutputToMotorSpeed(PID_Calculate(&pid_LF, dt)),
-                 PID_OutputToMotorSpeed(PID_Calculate(&pid_LR, dt)),
-                 PID_OutputToMotorSpeed(PID_Calculate(&pid_RF, dt)),
-                 PID_OutputToMotorSpeed(PID_Calculate(&pid_RR, dt)));
+  float out_LF, out_LR, out_RF, out_RR;
+
+  // ======== 左前輪 ========
+  if (pid_LF.target <= 0.02f) {
+    out_LF = 0.0f; // 速度小於 0.02，強制輸出 0 (對應 50% 佔空比停止)
+    PID_Reset(&pid_LF); // 清除歷史誤差，防止積分累積導致重新啟動時暴衝
+  } else {
+    out_LF = PID_Calculate(&pid_LF, dt);
+    if (out_LF < 0.0f)
+      out_LF = 0.0f; // 限制只輸出正轉，過濾掉任何後退指令
+  }
+
+  // ======== 左後輪 ========
+  if (pid_LR.target <= 0.02f) {
+    out_LR = 0.0f;
+    PID_Reset(&pid_LR);
+  } else {
+    out_LR = PID_Calculate(&pid_LR, dt);
+    if (out_LR < 0.0f)
+      out_LR = 0.0f;
+  }
+
+  // ======== 右前輪 ========
+  if (pid_RF.target <= 0.02f) {
+    out_RF = 0.0f;
+    PID_Reset(&pid_RF);
+  } else {
+    out_RF = PID_Calculate(&pid_RF, dt);
+    if (out_RF < 0.0f)
+      out_RF = 0.0f;
+  }
+
+  // ======== 右後輪 ========
+  if (pid_RR.target <= 0.02f) {
+    out_RR = 0.0f;
+    PID_Reset(&pid_RR);
+  } else {
+    out_RR = PID_Calculate(&pid_RR, dt);
+    if (out_RR < 0.0f)
+      out_RR = 0.0f;
+  }
+
+  // 下發給馬達
+  // 這裡的 out 為 0 時，會進入 motor.c 被轉換成 PWM 500 (50% 佔空比)
+  Motor_SetSpeed(PID_OutputToMotorSpeed(out_LF), PID_OutputToMotorSpeed(out_LR),
+                 PID_OutputToMotorSpeed(out_RF),
+                 PID_OutputToMotorSpeed(out_RR));
 }
 
 void PID_Motor_Stop(void) {

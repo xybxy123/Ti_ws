@@ -39,14 +39,14 @@ volatile int g_key_count = 0;
 // ==========================================================
 
 void MyGPTIMER1_INST_IRQHandler(void);
-void UART_0_DEBUG_INST_IRQHandler(void);
+void UART1_INST_IRQHandler(void);
 static void Encoder_StartCaptureTimers(void);
 static bool Control_ConsumeTick(void);
 static bool Key_ReadPressed(void);
-static void UART0_CommInit(void);
-static void UART0_SendString(const char *text);
-static void UART0_ConsumeRxLine(void);
-static void UART0_ReceiveByte(uint8_t data);
+static void UART1_CommInit(void);
+static void UART1_SendString(const char *text);
+static void UART1_ConsumeRxLine(void);
+static void UART1_ReceiveByte(uint8_t data);
 static bool ParseTwistLine(char *line, float *vx, float *vyaw);
 static char *SkipSeparators(char *text);
 static void Led_StartFlash(uint8_t flashes);
@@ -67,7 +67,7 @@ int main(void) {
   NVIC_SetPriority(MyGPTIMER1_INST_INT_IRQN, 1);
   DL_TimerG_startCounter(MyGPTIMER1_INST);
 
-  UART0_CommInit();
+  UART1_CommInit();
 
   DL_GPIO_setPins(GPIOB, GPIO_CTRL_POWER_PB19_PIN);
   Motor_StopAll();
@@ -87,7 +87,7 @@ int main(void) {
       Led_ProcessTick();
     }
 
-    UART0_ConsumeRxLine();
+    UART1_ConsumeRxLine();
 
     if (DL_GPIO_readPins(GPIO_CTRL_KEY_SWITCH_PORT, GPIO_CTRL_KEY_SWITCH_PIN)) {
       g_switch_state = SWITCH_STATE_1;
@@ -142,16 +142,16 @@ void MyGPTIMER1_INST_IRQHandler(void) {
   }
 }
 
-void UART_0_DEBUG_INST_IRQHandler(void) {
+void UART1_INST_IRQHandler(void) {
   uint8_t data = 0U;
 
-  switch (DL_UART_Main_getPendingInterrupt(UART_0_DEBUG_INST)) {
+  switch (DL_UART_Main_getPendingInterrupt(UART1_INST)) {
   case DL_UART_MAIN_IIDX_RX:
   case DL_UART_MAIN_IIDX_RX_TIMEOUT_ERROR:
-    while (DL_UART_Main_receiveDataCheck(UART_0_DEBUG_INST, &data)) {
-      UART0_ReceiveByte(data);
+    while (DL_UART_Main_receiveDataCheck(UART1_INST, &data)) {
+      UART1_ReceiveByte(data);
     }
-    DL_UART_Main_clearInterruptStatus(UART_0_DEBUG_INST,
+    DL_UART_Main_clearInterruptStatus(UART1_INST,
                                       DL_UART_MAIN_INTERRUPT_RX_TIMEOUT_ERROR);
     break;
 
@@ -159,7 +159,7 @@ void UART_0_DEBUG_INST_IRQHandler(void) {
   case DL_UART_MAIN_IIDX_BREAK_ERROR:
   case DL_UART_MAIN_IIDX_PARITY_ERROR:
   case DL_UART_MAIN_IIDX_FRAMING_ERROR:
-    DL_UART_Main_clearInterruptStatus(UART_0_DEBUG_INST,
+    DL_UART_Main_clearInterruptStatus(UART1_INST,
                                       DL_UART_MAIN_INTERRUPT_OVERRUN_ERROR |
                                           DL_UART_MAIN_INTERRUPT_BREAK_ERROR |
                                           DL_UART_MAIN_INTERRUPT_PARITY_ERROR |
@@ -190,23 +190,23 @@ static bool Key_ReadPressed(void) {
            GPIO_CTRL_KEY_KEY_PIN) == 0U);
 }
 
-static void UART0_CommInit(void) {
-  DL_UART_Main_enableInterrupt(UART_0_DEBUG_INST,
+static void UART1_CommInit(void) {
+  DL_UART_Main_enableInterrupt(UART1_INST,
                                DL_UART_MAIN_INTERRUPT_RX |
                                    DL_UART_MAIN_INTERRUPT_RX_TIMEOUT_ERROR);
-  NVIC_ClearPendingIRQ(UART_0_DEBUG_INST_INT_IRQN);
-  NVIC_SetPriority(UART_0_DEBUG_INST_INT_IRQN, 2);
-  NVIC_EnableIRQ(UART_0_DEBUG_INST_INT_IRQN);
+  NVIC_ClearPendingIRQ(UART1_INST_INT_IRQN);
+  NVIC_SetPriority(UART1_INST_INT_IRQN, 2);
+  NVIC_EnableIRQ(UART1_INST_INT_IRQN);
 }
 
-static void UART0_SendString(const char *text) {
+static void UART1_SendString(const char *text) {
   while (*text != '\0') {
-    DL_UART_Main_transmitDataBlocking(UART_0_DEBUG_INST, (uint8_t)*text);
+    DL_UART_Main_transmitDataBlocking(UART1_INST, (uint8_t)*text);
     text++;
   }
 }
 
-static void UART0_ConsumeRxLine(void) {
+static void UART1_ConsumeRxLine(void) {
   char line[UART_RX_LINE_LEN];
   float vx = 0.0f;
   float vyaw = 0.0f;
@@ -238,7 +238,7 @@ static void UART0_ConsumeRxLine(void) {
   }
 }
 
-static void UART0_ReceiveByte(uint8_t data) {
+static void UART1_ReceiveByte(uint8_t data) {
   if (data == '\r') {
     return;
   }
@@ -329,14 +329,14 @@ static void App_ProcessReport(void) {
 
   if ((g_switch_state == SWITCH_STATE_1) && (g_key_count >= 5) &&
       !report_100_sent) {
-    UART0_SendString("100\r\n");
+    UART1_SendString("100\r\n");
     Led_StartFlash(2U);
     report_100_sent = true;
   }
 
   if ((g_switch_state == SWITCH_STATE_2) && (g_key_count >= 10) &&
       !report_200_sent) {
-    UART0_SendString("200\r\n");
+    UART1_SendString("200\r\n");
     Led_StartFlash(4U);
     report_200_sent = true;
   }
