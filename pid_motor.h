@@ -3,6 +3,11 @@
 
 #include <stdint.h>
 
+// ==================== 差速底盘运动学参数 ====================
+// 单位统一定义为 米 (m)
+#define ROBOT_TRACK_WIDTH_M (0.256f) // 左右轮距 256mm
+// ========================================================
+
 typedef struct {
   float kp;
   float ki;
@@ -34,5 +39,12 @@ void PID_Motor_SetTargetSpeed(float speed_LF, float speed_LR, float speed_RF,
                               float speed_RR);
 void PID_Motor_Update(float dt);
 void PID_Motor_Stop(void);
+
+/*
+ * @brief  平行差速底盘 速度控制 (ROS cmd_vel 接口)
+ * @param  vx:   X轴线速度 (m/s)，正代表前进
+ * @param  vyaw: Z轴角速度 (rad/s)，正代表向左转 (逆时针)
+ */
+void PID_Motor_SetTwist(float vx, float vyaw);
 
 #endif /* PID_MOTOR_H_ */

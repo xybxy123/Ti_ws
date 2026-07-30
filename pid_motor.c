@@ -102,9 +102,7 @@ void PID_Motor_Stop(void) {
   Motor_StopAll();
 }
 
-static float PID_Abs(float value) {
-  return (value < 0.0f) ? -value : value;
-}
+static float PID_Abs(float value) { return (value < 0.0f) ? -value : value; }
 
 static float PID_Clamp(float value, float limit) {
   if (limit <= 0.0f) {
@@ -127,4 +125,22 @@ static int8_t PID_OutputToMotorSpeed(float output) {
 static void PID_MotorInitOne(PID_Struct *pid) {
   PID_Init(pid, PID_MOTOR_KP, PID_MOTOR_KI, PID_MOTOR_KD,
            PID_MOTOR_OUTPUT_LIMIT, PID_MOTOR_DELTA_LIMIT);
+}
+
+// ==============================================================================
+// 差速运动学解算接口 (Differential Drive Kinematics)
+// ==============================================================================
+
+void PID_Motor_SetTwist(float vx, float vyaw) {
+  // 当机器人向左转 (vyaw > 0) 时，右侧轮子速度需要大于左侧轮子
+  // 角速度带来的轮边线速度偏移量为: V_delta = vyaw * (Track_Width / 2)
+  float v_delta = vyaw * (ROBOT_TRACK_WIDTH_M / 2.0f);
+
+  // 计算左右两侧的期望线速度
+  float v_left = vx - v_delta;
+  float v_right = vx + v_delta;
+
+  // 将计算结果下发给四个电机
+  // (由于是平行差速，左前和左后速度相同，右前和右后速度相同)
+  PID_Motor_SetTargetSpeed(v_left, v_left, v_right, v_right);
 }
