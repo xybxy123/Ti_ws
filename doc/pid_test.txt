@@ -17,3 +17,8 @@
 
 4. 立即停车并清 PID 状态：
    PID_Motor_Stop();
+
+
+
+PB3 switch
+PA7 按键
