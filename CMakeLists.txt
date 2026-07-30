@@ -29,6 +29,8 @@ set(STARTUP_FILE "${SDK_ROOT}/source/ti/devices/msp/m0p/startup_system_files/gcc
 set(CPU_FLAGS "-mcpu=cortex-m0plus -mthumb -mfloat-abi=soft")
 set(CMAKE_C_FLAGS "${CPU_FLAGS} -O2 -ffunction-sections -fdata-sections -g -Wall")
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 # 6. 設定 Linker (連結器) 與 SysConfig 產生的腳本，【重點：加入 -Wl,--entry,Reset_Handler】
 set(LINKER_SCRIPT "${CMAKE_SOURCE_DIR}/generated_output/device_linker.lds")
 set(CMAKE_EXE_LINKER_FLAGS "${CPU_FLAGS} -T ${LINKER_SCRIPT} -Wl,--gc-sections -Wl,-Map=output.map -Wl,--entry,Reset_Handler --specs=nano.specs --specs=nosys.specs")
@@ -38,12 +40,15 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/generated_output
     ${SDK_ROOT}/source
     ${SDK_ROOT}/source/third_party/CMSIS/Core/Include
+    /home/xybxy123/w_work/Ti/generated_output
 )
 
 # 8. 定義原始碼
 set(SOURCES
     main.c
-    motor.c              # <--- 新增這行！
+    motor.c
+    encoder.c           
+    pid_motor.c
     generated_output/ti_msp_dl_config.c
     ${STARTUP_FILE}
 )

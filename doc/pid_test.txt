@@ -1,0 +1,19 @@
+四轮速度环接口：
+
+1. PID 参数在 pid_motor.c 里统一配置：
+   P = 200.0f
+   I = 7000.0f
+   D = 0.3f
+   output_limit = 100.0f
+   delta_limit = 0.0f
+
+2. 目标速度单位是 m/s：
+   PID_Motor_SetTargetSpeed(lf, lr, rf, rr);
+
+   当前 main.c 默认四轮目标速度都是 0.20 m/s。
+
+3. 10ms 周期调用：
+   PID_Motor_Update(0.01f);
+
+4. 立即停车并清 PID 状态：
+   PID_Motor_Stop();

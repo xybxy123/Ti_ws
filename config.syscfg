@@ -30,7 +30,6 @@ const SPI      = scripting.addModule("/ti/driverlib/SPI", {}, false);
 const SPI1     = SPI.addInstance();
 const TIMER    = scripting.addModule("/ti/driverlib/TIMER", {}, false);
 const TIMER1   = TIMER.addInstance();
-const TIMER2   = TIMER.addInstance();
 const UART     = scripting.addModule("/ti/driverlib/UART", {}, false);
 const UART1    = UART.addInstance();
 const UART2    = UART.addInstance();
@@ -163,11 +162,11 @@ SPI1.cs0PinConfig.$name                      = "ti_driverlib_gpio_GPIOPinGeneric
 const SYSCTL       = scripting.addModule("/ti/driverlib/SYSCTL", {}, false);
 SYSCTL.clockTreeEn = true;
 
-TIMER1.$name              = "TIMER_0";
-TIMER1.peripheral.$assign = "TIMG8";
-
-TIMER2.$name              = "MyGPTIMER1";
-TIMER2.peripheral.$assign = "TIMG12";
+TIMER1.$name              = "MyGPTIMER1";
+TIMER1.timerPeriod        = "10 ms";
+TIMER1.timerMode          = "PERIODIC";
+TIMER1.interrupts         = ["ZERO"];
+TIMER1.peripheral.$assign = "TIMG12";
 
 UART1.$name                            = "UART_0_DEBUG";
 UART1.peripheral.$assign               = "UART0";
