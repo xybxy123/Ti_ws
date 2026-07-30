@@ -18,10 +18,20 @@ typedef struct {
   volatile uint32_t count_RF; // 右前轮脉冲总数 (M1 -> PA12)
   volatile uint32_t count_RR; // 右后轮脉冲总数 (M4 -> PA28)
 
+  volatile uint32_t reverse_count_LF; // 左前轮反转 B 相脉冲 (M2_B -> PA14)
+  volatile uint32_t reverse_count_LR; // 左后轮反转 B 相脉冲 (M3_B -> PA25)
+  volatile uint32_t reverse_count_RF; // 右前轮反转 B 相脉冲 (M1_B -> PA13)
+  volatile uint32_t reverse_count_RR; // 右后轮反转 B 相脉冲 (M4_B -> PA4)
+
   float vel_LF; // 脉冲/秒
   float vel_LR;
   float vel_RF;
   float vel_RR;
+
+  float reverse_vel_LF; // 反转 B 相脉冲/秒
+  float reverse_vel_LR;
+  float reverse_vel_RF;
+  float reverse_vel_RR;
 } Encoder;
 
 extern Encoder encoder_;
@@ -33,5 +43,9 @@ float Encoder_GetLeftFrontVel(Encoder *enc);
 float Encoder_GetLeftRearVel(Encoder *enc);
 float Encoder_GetRightFrontVel(Encoder *enc);
 float Encoder_GetRightRearVel(Encoder *enc);
+float Encoder_GetReverseLeftFrontVel(Encoder *enc);
+float Encoder_GetReverseLeftRearVel(Encoder *enc);
+float Encoder_GetReverseRightFrontVel(Encoder *enc);
+float Encoder_GetReverseRightRearVel(Encoder *enc);
 
 #endif /* ENCODER_H_ */

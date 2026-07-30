@@ -7,10 +7,18 @@ void Encoder_Init(Encoder *enc) {
   enc->count_LR = 0;
   enc->count_RF = 0;
   enc->count_RR = 0;
+  enc->reverse_count_LF = 0;
+  enc->reverse_count_LR = 0;
+  enc->reverse_count_RF = 0;
+  enc->reverse_count_RR = 0;
   enc->vel_LF = 0.0f;
   enc->vel_LR = 0.0f;
   enc->vel_RF = 0.0f;
   enc->vel_RR = 0.0f;
+  enc->reverse_vel_LF = 0.0f;
+  enc->reverse_vel_LR = 0.0f;
+  enc->reverse_vel_RF = 0.0f;
+  enc->reverse_vel_RR = 0.0f;
 }
 
 // 计算速度：用一个周期内收集到的脉冲数除以时间 dt
@@ -25,11 +33,19 @@ void Encoder_UpdateVelocity(Encoder *enc, float dt) {
   uint32_t count_LR = enc->count_LR;
   uint32_t count_RF = enc->count_RF;
   uint32_t count_RR = enc->count_RR;
+  uint32_t reverse_count_LF = enc->reverse_count_LF;
+  uint32_t reverse_count_LR = enc->reverse_count_LR;
+  uint32_t reverse_count_RF = enc->reverse_count_RF;
+  uint32_t reverse_count_RR = enc->reverse_count_RR;
 
   enc->count_LF = 0;
   enc->count_LR = 0;
   enc->count_RF = 0;
   enc->count_RR = 0;
+  enc->reverse_count_LF = 0;
+  enc->reverse_count_LR = 0;
+  enc->reverse_count_RF = 0;
+  enc->reverse_count_RR = 0;
 
   if (primask == 0U) {
     __enable_irq();
@@ -40,12 +56,28 @@ void Encoder_UpdateVelocity(Encoder *enc, float dt) {
   enc->vel_LR = (float)count_LR / dt;
   enc->vel_RF = (float)count_RF / dt;
   enc->vel_RR = (float)count_RR / dt;
+  enc->reverse_vel_LF = (float)reverse_count_LF / dt;
+  enc->reverse_vel_LR = (float)reverse_count_LR / dt;
+  enc->reverse_vel_RF = (float)reverse_count_RF / dt;
+  enc->reverse_vel_RR = (float)reverse_count_RR / dt;
 }
 
 float Encoder_GetLeftFrontVel(Encoder *enc) { return enc->vel_LF; }
 float Encoder_GetLeftRearVel(Encoder *enc) { return enc->vel_LR; }
 float Encoder_GetRightFrontVel(Encoder *enc) { return enc->vel_RF; }
 float Encoder_GetRightRearVel(Encoder *enc) { return enc->vel_RR; }
+float Encoder_GetReverseLeftFrontVel(Encoder *enc) {
+  return enc->reverse_vel_LF;
+}
+float Encoder_GetReverseLeftRearVel(Encoder *enc) {
+  return enc->reverse_vel_LR;
+}
+float Encoder_GetReverseRightFrontVel(Encoder *enc) {
+  return enc->reverse_vel_RF;
+}
+float Encoder_GetReverseRightRearVel(Encoder *enc) {
+  return enc->reverse_vel_RR;
+}
 
 void TIMG0_IRQHandler(void) {
   switch (DL_TimerG_getPendingInterrupt(M1_INST)) {

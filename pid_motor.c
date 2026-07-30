@@ -1,26 +1,40 @@
 #include "pid_motor.h"
 #include "motor.h"
 
-#define PID_MOTOR_KP (200.0f)
-#define PID_MOTOR_KI (7000.0f)
-#define PID_MOTOR_KD (0.3f)
-#define PID_MOTOR_OUTPUT_LIMIT (20.0f)
-#define PID_MOTOR_DELTA_LIMIT (0.2f)
+float PID_MOTOR_KP = 0.0f;
+float PID_MOTOR_KI = 2000.0f;
+float PID_MOTOR_KD = 0.0f;
+float PID_MOTOR_OUTPUT_LIMIT = 200.0f;
+float PID_MOTOR_DELTA_LIMIT = 1.0f;
 
 PID_Struct pid_LF;
 PID_Struct pid_LR;
+
 PID_Struct pid_RF;
 PID_Struct pid_RR;
+
+float p = 2.0f;
+float i = 1000.0f;
+float d = 0.0f;
+float out_limit = 200.0f;
+float delta_limit = 1.0f;
 
 extern volatile float vel_LF_mps;
 extern volatile float vel_LR_mps;
 extern volatile float vel_RF_mps;
 extern volatile float vel_RR_mps;
+extern volatile float reverse_vel_LF_mps;
+extern volatile float reverse_vel_LR_mps;
+extern volatile float reverse_vel_RF_mps;
+extern volatile float reverse_vel_RR_mps;
 
 static float PID_Abs(float value);
 static float PID_Clamp(float value, float limit);
 static int8_t PID_OutputToMotorSpeed(float output);
+static float PID_MotorUpdateOne(PID_Struct *pid, float forward_input,
+                                float reverse_input, float dt);
 static void PID_MotorInitOne(PID_Struct *pid);
+static void PID_MotorInitTwo(PID_Struct *pid);
 
 void PID_Init(PID_Struct *pid, float p, float i, float d, float out_limit,
               float delta_limit) {
@@ -67,8 +81,8 @@ float PID_Calculate(PID_Struct *pid, float dt) {
 }
 
 void PID_Motor_Init(void) {
-  PID_MotorInitOne(&pid_LF);
-  PID_MotorInitOne(&pid_LR);
+  PID_MotorInitTwo(&pid_LF);
+  PID_MotorInitTwo(&pid_LR);
   PID_MotorInitOne(&pid_RF);
   PID_MotorInitOne(&pid_RR);
 }
@@ -81,66 +95,15 @@ void PID_Motor_SetTargetSpeed(float speed_LF, float speed_LR, float speed_RF,
   PID_SetTarget(&pid_RR, speed_RR);
 }
 
-// void PID_Motor_Update(float dt) {
-//   pid_LF.input = vel_LF_mps;
-//   pid_LR.input = vel_LR_mps;
-//   pid_RF.input = vel_RF_mps;
-//   pid_RR.input = vel_RR_mps;
-
-//   Motor_SetSpeed(PID_OutputToMotorSpeed(PID_Calculate(&pid_LF, dt)),
-//                  PID_OutputToMotorSpeed(PID_Calculate(&pid_LR, dt)),
-//                  PID_OutputToMotorSpeed(PID_Calculate(&pid_RF, dt)),
-//                  PID_OutputToMotorSpeed(PID_Calculate(&pid_RR, dt)));
-// }
-
 void PID_Motor_Update(float dt) {
-  // 因為沒有反向，編碼器讀回來的速度永遠是正數
-  pid_LF.input = vel_LF_mps;
-  pid_LR.input = vel_LR_mps;
-  pid_RF.input = vel_RF_mps;
-  pid_RR.input = vel_RR_mps;
-
-  float out_LF, out_LR, out_RF, out_RR;
-
-  // ======== 左前輪 ========
-  if (pid_LF.target <= 0.02f) {
-    out_LF = 0.0f; // 速度小於 0.02，強制輸出 0 (對應 50% 佔空比停止)
-    PID_Reset(&pid_LF); // 清除歷史誤差，防止積分累積導致重新啟動時暴衝
-  } else {
-    out_LF = PID_Calculate(&pid_LF, dt);
-    if (out_LF < 0.0f)
-      out_LF = 0.0f; // 限制只輸出正轉，過濾掉任何後退指令
-  }
-
-  // ======== 左後輪 ========
-  if (pid_LR.target <= 0.02f) {
-    out_LR = 0.0f;
-    PID_Reset(&pid_LR);
-  } else {
-    out_LR = PID_Calculate(&pid_LR, dt);
-    if (out_LR < 0.0f)
-      out_LR = 0.0f;
-  }
-
-  // ======== 右前輪 ========
-  if (pid_RF.target <= 0.02f) {
-    out_RF = 0.0f;
-    PID_Reset(&pid_RF);
-  } else {
-    out_RF = PID_Calculate(&pid_RF, dt);
-    if (out_RF < 0.0f)
-      out_RF = 0.0f;
-  }
-
-  // ======== 右後輪 ========
-  if (pid_RR.target <= 0.02f) {
-    out_RR = 0.0f;
-    PID_Reset(&pid_RR);
-  } else {
-    out_RR = PID_Calculate(&pid_RR, dt);
-    if (out_RR < 0.0f)
-      out_RR = 0.0f;
-  }
+  float out_LF =
+      PID_MotorUpdateOne(&pid_LF, vel_LF_mps, reverse_vel_LF_mps, dt);
+  float out_LR =
+      PID_MotorUpdateOne(&pid_LR, vel_LR_mps, reverse_vel_LR_mps, dt);
+  float out_RF =
+      PID_MotorUpdateOne(&pid_RF, vel_RF_mps, reverse_vel_RF_mps, dt);
+  float out_RR =
+      PID_MotorUpdateOne(&pid_RR, vel_RR_mps, reverse_vel_RR_mps, dt);
 
   // 下發給馬達
   // 這裡的 out 為 0 時，會進入 motor.c 被轉換成 PWM 500 (50% 佔空比)
@@ -178,9 +141,36 @@ static int8_t PID_OutputToMotorSpeed(float output) {
   return (int8_t)output;
 }
 
+static float PID_MotorUpdateOne(PID_Struct *pid, float forward_input,
+                                float reverse_input, float dt) {
+  if (PID_Abs(pid->target) <= 0.02f) {
+    PID_Reset(pid);
+    return 0.0f;
+  }
+
+  if (pid->target < 0.0f) {
+    pid->input = -reverse_input;
+  } else {
+    pid->input = forward_input;
+  }
+
+  float output = PID_Calculate(pid, dt);
+  if ((pid->target > 0.0f) && (output < 0.0f)) {
+    output = 0.0f;
+  } else if ((pid->target < 0.0f) && (output > 0.0f)) {
+    output = 0.0f;
+  }
+
+  return output;
+}
+
 static void PID_MotorInitOne(PID_Struct *pid) {
   PID_Init(pid, PID_MOTOR_KP, PID_MOTOR_KI, PID_MOTOR_KD,
            PID_MOTOR_OUTPUT_LIMIT, PID_MOTOR_DELTA_LIMIT);
+}
+
+static void PID_MotorInitTwo(PID_Struct *pid) {
+  PID_Init(pid, p, i, d, out_limit, delta_limit);
 }
 
 // ==============================================================================

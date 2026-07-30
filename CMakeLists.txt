@@ -49,6 +49,7 @@ set(SOURCES
     motor.c
     encoder.c           
     pid_motor.c
+    pid_pos.c
     generated_output/ti_msp_dl_config.c
     ${STARTUP_FILE}
 )

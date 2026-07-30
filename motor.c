@@ -28,18 +28,12 @@ static uint32_t Calculate_PWM_Value(int8_t speed) {
 
 /* 左前輪 M2 -> PA9 (Channel 1) */
 void Motor_SetLeftFront(int8_t speed) {
-  if (speed < 0) {
-    speed = 0;
-  }
   uint32_t val = Calculate_PWM_Value(speed);
   DL_TimerA_setCaptureCompareValue(PWM_MOTOR_INST, val, DL_TIMER_CC_1_INDEX);
 }
 
 /* 左後輪 M3 -> PB17 (Channel 2) */
 void Motor_SetLeftRear(int8_t speed) {
-  if (speed < 0) {
-    speed = 0;
-  }
   uint32_t val = Calculate_PWM_Value(speed);
   DL_TimerA_setCaptureCompareValue(PWM_MOTOR_INST, val, DL_TIMER_CC_2_INDEX);
 }
@@ -48,9 +42,6 @@ void Motor_SetLeftRear(int8_t speed) {
  * 備註：因為硬體安裝對稱的關係，右側馬達通常需要反轉，所以傳入 -speed
  */
 void Motor_SetRightFront(int8_t speed) {
-  if (speed < 0) {
-    speed = 0;
-  }
   uint32_t val = Calculate_PWM_Value(-speed);
   DL_TimerA_setCaptureCompareValue(PWM_MOTOR_INST, val, DL_TIMER_CC_0_INDEX);
 }
@@ -59,9 +50,6 @@ void Motor_SetRightFront(int8_t speed) {
  * 備註：右側馬達反轉
  */
 void Motor_SetRightRear(int8_t speed) {
-  if (speed < 0) {
-    speed = 0;
-  }
   uint32_t val = Calculate_PWM_Value(-speed);
   DL_TimerA_setCaptureCompareValue(PWM_MOTOR_INST, val, DL_TIMER_CC_3_INDEX);
 }
